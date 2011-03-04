@@ -92,10 +92,10 @@ public class Doclet {
     JSONObject fields_info = new JSONObject();
     for (int j = 0; j < fields.length; j++) {
       JSONObject field_info = new JSONObject();
-
       field_info.put("type", fields[j].type().toString());
-
-      fields_info.put(fields[j].toString(), field_info);
+      field_info.put("qualified-name", fields[j].qualifiedName());
+      field_info.put("comment-text", fields[j].commentText());
+      fields_info.put(fields[j].name(), field_info);
     }
     class_info.put("fields", fields_info);
 

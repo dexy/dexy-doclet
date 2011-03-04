@@ -10,7 +10,6 @@
     {{ package_info['comment-text'] }}
     {% for class_name, class_info in package_info['classes'].items() %}
 
-    {{ class_info.keys() }}
     <h2 id="{{ class_info['qualified-name'] }}">Class {{ class_name }}</h2>
 
     Subclass of: <a href="#{{ class_info['superclass'] }}">{{ class_info['superclass'] }}</a>
@@ -19,6 +18,11 @@
       <li>{{ tag_name }} - {{ tag_info["text"] }}</li>
       {% endfor %}
     </ul>
+
+      {% for field_name, field_info in class_info['fields'].items() %}
+      <h3>Field {{ field_name}}</h3>
+      {{ field_info }}
+      {% endfor %}
 
 
     {% for method_name, method_info in class_info['methods'].items() %}
