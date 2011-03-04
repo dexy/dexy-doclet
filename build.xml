@@ -6,6 +6,7 @@
   <property name="src.dir" location="src" />
   <property name="lib.dir" location="lib" />
   <property name="doc.dir" location="docs" />
+  <property name="test.dir" location="tests" />
   <property name="example.dir" location="example" />
   <property name="doc.example.dir" location="docs-example" />
 
@@ -13,6 +14,7 @@
   <path id="project.classpath">
     <pathelement location="${build.prod.dir}" />
     <pathelement location="${build.test.dir}" />
+    <pathelement location="/java/junit-4.9b2.jar" />
     <fileset dir="${lib.dir}">
       <include name="*.jar"/>
     </fileset>
@@ -35,6 +37,12 @@
 
   <target name="compile" depends="clean, prepare">
     <javac srcdir="${src.dir}" destdir="${build.prod.dir}">
+      <classpath refid="project.classpath" />
+    </javac>
+  </target>
+
+  <target name="compile-tests" depends="compile">
+    <javac srcdir="${test.dir}" destdir="${build.test.dir}">
       <compilerarg value="-Xlint" />
       <classpath refid="project.classpath" />
     </javac>
@@ -57,13 +65,33 @@
     </javadoc>
   </target>
 
+  <target name="javadoc-example-traditional" depends="compile">
+    <javadoc
+      sourcefiles="example/helloworld.java"
+      destdir="javadocs-hello"
+    />
+</target>
+
   <target name="javadoc-example" depends="compile">
     <javadoc
       sourcefiles="example/helloworld.java"
       doclet="it.dexy.jsondoclet.Doclet"
       docletpathref="project.classpath"
-      destdir="${doc.example.dir}"
+      destdir="example"
     />
+  </target>
+
+  <target name="test" depends="compile-tests">
+    <junit haltonfailure="true">
+      <classpath refid="project.classpath" />
+      <formatter type="brief" usefile="false" />
+      <batchtest>
+        <fileset dir="${build.test.dir}"
+          includes="**/*Test.class" />
+      </batchtest>
+      <sysproperty key="doc.dir" value="${doc.dir}" />
+      <sysproperty key="index.dir" value="${index.dir}" />
+    </junit>
   </target>
 
 </project>
