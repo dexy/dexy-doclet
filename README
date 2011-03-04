@@ -1,0 +1,7 @@
+A custom Javadoc Doclet which generates JSON of all the Javadoc info, so you can write your own documentation in any format and make use of existing Javadoc comments and project structure.
+
+ant -p shows available ant tasks
+
+Uses json-simple:
+http://code.google.com/p/json-simple/
+
