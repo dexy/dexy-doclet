@@ -1,7 +1,7 @@
 package hello;
 
 /**
- * Class which says hello, world!
+ * Class which says *hello* to the world.
  *
  * @since the beginning of time
  */

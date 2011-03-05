@@ -135,6 +135,10 @@ public class Doclet {
       method_info.put("raw-comment-text", method.getRawCommentText());
       method_info.put("comment-text", method.commentText());
       method_info.put("return-type", method.returnType().toString());
+      method_info.put("qualified-name", method.qualifiedName());
+      method_info.put("modifiers", method.modifiers());
+      method_info.put("signature", method.signature());
+      method_info.put("flat-signature", method.flatSignature());
 
       int line_start = method.position().line();
       method_info.put("line-start", line_start);
