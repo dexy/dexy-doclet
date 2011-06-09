@@ -14,7 +14,6 @@
   <path id="project.classpath">
     <pathelement location="${build.prod.dir}" />
     <pathelement location="${build.test.dir}" />
-    <pathelement location="/java/junit-4.9b2.jar" />
     <fileset dir="${lib.dir}">
       <include name="*.jar"/>
     </fileset>
@@ -56,7 +55,8 @@
   </target>
 
   <target name="jar" depends="compile">
-    <jar basedir="${build.prod.dir}" destfile="${build.dir}/json-doclet.jar" />
+      <property name="version.num" value="0.11"/>
+      <jar basedir="${build.prod.dir}" destfile="${build.dir}/json-doclet-${version.num}.jar" />
   </target>
 
   <target name="javadoc">

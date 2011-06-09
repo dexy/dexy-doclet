@@ -5,3 +5,4 @@ ant -p shows available ant tasks
 Uses json-simple:
 http://code.google.com/p/json-simple/
 
+The goal is to implement all info available via the Java 1.6 API. If possible I will catch errors so that it can be used for Java 1.5.
