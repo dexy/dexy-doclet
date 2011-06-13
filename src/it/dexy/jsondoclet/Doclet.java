@@ -6,6 +6,7 @@ import com.sun.javadoc.FieldDoc;
 import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.RootDoc;
 import com.sun.javadoc.Tag;
+import com.sun.javadoc.SourcePosition;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -23,9 +24,13 @@ import latexlet.InlineBlockLaTeXlet;
 import latexlet.InlineLaTeXlet;
 import latexlet.BlockLaTeXlet;
 
+import it.dexy.jsondoclet.JavaLexer;
+import it.dexy.jsondoclet.JavaParser;
+import org.antlr.runtime.*;
+
 public class Doclet {
 
-    public static boolean start(RootDoc root) throws java.io.IOException {
+    public static boolean start(RootDoc root) throws java.io.IOException, RecognitionException {
         // Get options from option parser.
         HashMap options = readOptions(root.options());
 
@@ -52,6 +57,7 @@ public class Doclet {
             String class_name = classes[i].name();
             String package_name = package_doc.name();
 
+
             // Get the existing package_info or create a new one if this is the
             // first time we've seen this package.
             if (packages_info.containsKey(package_name)) {
@@ -70,7 +76,8 @@ public class Doclet {
 
             // Get info for this class, put it in the list of classes for this
             // package.
-            package_classes_info.put(class_name, classInfo(classes[i]));
+            JSONObject class_info = classInfo(classes[i]);
+            package_classes_info.put(class_name, class_info);
 
             // Now put the list of classes under 'classes' label in package
             // info.
@@ -94,10 +101,15 @@ public class Doclet {
         return true;
     }
 
-    public static JSONObject classInfo(ClassDoc cls) throws java.io.IOException {
+    public static JSONObject classInfo(ClassDoc cls) throws java.io.IOException, RecognitionException {
         JSONObject class_info = new JSONObject();
-        FileReader fr = new FileReader(cls.position().file());
-        LineNumberReader br = new LineNumberReader(fr);
+
+        String source_file_name = cls.position().file().toString();
+        ANTLRFileStream input = new ANTLRFileStream(source_file_name);
+        JavaLexer lexer = new JavaLexer(input);
+        TokenRewriteStream tokens = new TokenRewriteStream(lexer);
+        JavaParser parser = new JavaParser(tokens);
+        JSONObject source_code = parser.compilationUnit();
 
         if (cls.superclass() != null) {
             class_info.put("superclass", cls.superclass().toString());
@@ -107,6 +119,7 @@ public class Doclet {
         class_info.put("qualified-name", cls.qualifiedName());
         class_info.put("source-file", cls.position().file().toString());
         class_info.put("line-start", cls.position().line());
+        class_info.put("source", source_code.toString());
 
         /// @export "class-tags"
         Tag[] tags = cls.tags();
@@ -158,33 +171,23 @@ public class Doclet {
         MethodDoc methods[] = cls.methods();
         JSONObject methods_info = new JSONObject();
         for (int j = 0; j < methods.length; j++) {
-            JSONObject method_info;
-            if (j < (methods.length - 1)) {
-                method_info = methodInfo(methods[j], br, methods[j+1]);
-            } else {
-                method_info = methodInfo(methods[j], br, -1);
-            }
-            methods_info.put(methods[j].name(), method_info);
+            String method_name = methods[j].name();
+            String method_source_code = (String)((JSONObject)source_code.get("methods")).get(method_name);
+
+            // Get javadoc info.
+            JSONObject method_info = methodInfo(methods[j]);
+
+            // Add our parsed source code to javadoc info.
+            method_info.put("source", method_source_code);
+
+            methods_info.put(method_name, method_info);
         }
 
         class_info.put("methods", methods_info);
-        fr.close();
-        br.close();
         return class_info;
     }
 
-    public static JSONObject methodInfo(MethodDoc method, LineNumberReader br, MethodDoc nextMethod) throws java.io.IOException {
-        int next_method_comment_lines = countLines(nextMethod.getRawCommentText());
-        // 'raw' comment text doesn't include leading /** and trailing */
-        if (next_method_comment_lines > 0) {
-            next_method_comment_lines += 2;
-        }
-        int next_method_start = nextMethod.position().line();
-        int line_end = next_method_start - next_method_comment_lines;
-        return methodInfo(method, br, line_end);
-    }
-
-    public static JSONObject methodInfo(MethodDoc method, LineNumberReader br, int line_end) throws java.io.IOException {
+    public static JSONObject methodInfo(MethodDoc method) throws java.io.IOException {
         JSONObject method_info = new JSONObject();
 
         method_info.put("raw-comment-text", method.getRawCommentText());
@@ -194,42 +197,6 @@ public class Doclet {
         method_info.put("modifiers", method.modifiers());
         method_info.put("signature", method.signature());
         method_info.put("flat-signature", method.flatSignature());
-
-        int line_start = method.position().line();
-        method_info.put("line-start", line_start);
-        if (line_end > -1) {
-            method_info.put("line-end", line_end);
-        }
-
-        JSONObject lines = new JSONObject();
-        StringBuffer source_code = new StringBuffer();
-
-        // skip over any lines before starting point
-        while(br.getLineNumber() < line_start-1) {
-            String line = br.readLine();
-        }
-
-        if (line_end == -1) {
-            // read to end of file
-            boolean c = true;
-            while (c) {
-                String line = br.readLine();
-                c = (line != null);
-                if (c) {
-                    method_info.put(br.getLineNumber(), line);
-                    source_code.append(line + "\n");
-                }
-            }
-        } else {
-            // read to line_end
-            while (br.getLineNumber() < line_end-1) {
-                String line = br.readLine();
-                lines.put(br.getLineNumber(), line);
-                source_code.append(line + "\n");
-            }
-        }
-        method_info.put("lines", lines);
-        method_info.put("source", source_code.toString());
 
         Tag[] method_tags = method.tags();
         JSONObject method_tags_info = new JSONObject();
@@ -292,18 +259,6 @@ public class Doclet {
 
         return tag_info;
     }
-
-/**
- * Utility method to count the number of lines in a String.
- **/
-protected static int countLines(String str){
-    if (str.length() == 0) {
-        return 0;
-    } else {
-        String[] lines = str.split("\r\n|\r|\n");
-        return lines.length;
-    }
-}
 
 private static HashMap readOptions(String[][] options) {
     HashMap options_hash = new HashMap();
