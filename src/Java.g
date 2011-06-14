@@ -293,6 +293,7 @@ options {
 @header {
     package it.dexy.jsondoclet;
     import org.json.simple.JSONObject;
+    import java.util.ArrayList;
 }
 
 @lexer::header {
@@ -308,12 +309,16 @@ scope {
     JSONObject classes;
     JSONObject methods;
     JSONObject all_info;
+    ArrayList param_types;
     String packageName;
 }
 @init {
     $compilationUnit::classes = new JSONObject();
     $compilationUnit::methods = new JSONObject();
     $compilationUnit::all_info = new JSONObject();
+    $compilationUnit::param_types = new ArrayList();
+    System.out.println("in compilationUnit init");
+    System.out.println($compilationUnit::param_types);
 }
     :   (   (annotations
             )?
@@ -527,9 +532,9 @@ classBodyDeclaration
     |   memberDecl
     ;
 
-memberDecl 
+memberDecl
     :    fieldDeclaration
-    |    methodDeclaration 
+    |    methodDeclaration
     |    classDeclaration
     |    interfaceDeclaration
     ;
@@ -554,23 +559,35 @@ scope {
         (blockStatement
         )*
         '}'
+            {
+            $methodDeclaration::methodName = $IDENTIFIER.text + $formalParameters.text;
+            System.out.println("parsed method name: " + $methodDeclaration::methodName);
+            System.out.println("arraylist params: " + $compilationUnit::param_types);
+            $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
+            }
     |   modifiers
         (typeParameters
         )?
         (type
         |   'void'
         )
-        IDENTIFIER { $methodDeclaration::methodName = $IDENTIFIER.text; }
+        IDENTIFIER
         formalParameters
         ('[' ']'
         )*
         ('throws' qualifiedNameList
         )?
         (
-            block { $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text); }
+            block
         |   ';'
         )
 
+            {
+            $methodDeclaration::methodName = $IDENTIFIER.text + $formalParameters.text;
+            System.out.println("parsed method name: " + $methodDeclaration::methodName);
+            System.out.println("arraylist params: " + $compilationUnit::param_types);
+            $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
+            }
     ;
 
 
@@ -686,26 +703,30 @@ qualifiedNameList
         )*
     ;
 
-formalParameters 
+formalParameters
+@init {
+    System.out.println("resetting param_types in formalParameters");
+    $compilationUnit::param_types = new ArrayList();
+}
     :   '('
         (formalParameterDecls
-        )? 
+        )?
         ')'
     ;
 
-formalParameterDecls 
+formalParameterDecls
     :   ellipsisParameterDecl
     |   normalParameterDecl
         (',' normalParameterDecl
         )*
     |   (normalParameterDecl
         ','
-        )+ 
+        )+
         ellipsisParameterDecl
     ;
 
-normalParameterDecl 
-    :   variableModifiers type IDENTIFIER
+normalParameterDecl
+    :   variableModifiers type IDENTIFIER { $compilationUnit::param_types.add($type.text); }
         ('[' ']'
         )*
     ;

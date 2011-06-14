@@ -7,6 +7,8 @@ import com.sun.javadoc.MethodDoc;
 import com.sun.javadoc.RootDoc;
 import com.sun.javadoc.Tag;
 import com.sun.javadoc.SourcePosition;
+import com.sun.javadoc.Parameter;
+import com.sun.javadoc.ParameterizedType;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -171,16 +173,17 @@ public class Doclet {
         MethodDoc methods[] = cls.methods();
         JSONObject methods_info = new JSONObject();
         for (int j = 0; j < methods.length; j++) {
-            String method_name = methods[j].name();
-            String method_source_code = (String)((JSONObject)source_code.get("methods")).get(method_name);
-
             // Get javadoc info.
             JSONObject method_info = methodInfo(methods[j]);
+            String full_method_name = (String)method_info.get("full-method-name");
+            System.out.println("Full method name: " + full_method_name);
+
+            String method_source_code = (String)((JSONObject)source_code.get("methods")).get(full_method_name);
 
             // Add our parsed source code to javadoc info.
             method_info.put("source", method_source_code);
 
-            methods_info.put(method_name, method_info);
+            methods_info.put(full_method_name, method_info);
         }
 
         class_info.put("methods", methods_info);
@@ -194,9 +197,27 @@ public class Doclet {
         method_info.put("comment-text", method.commentText());
         method_info.put("return-type", method.returnType().toString());
         method_info.put("qualified-name", method.qualifiedName());
+        method_info.put("name", method.name());
         method_info.put("modifiers", method.modifiers());
         method_info.put("signature", method.signature());
         method_info.put("flat-signature", method.flatSignature());
+
+        // Uniquely identify this method within the scope of the class
+        method_info.put("full-method-name", method.name() + method.signature());
+
+        Parameter[] params = method.parameters();
+        for (int j = 0; j < params.length; j++) {
+            Parameter p = params[j];
+            System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+            System.out.println("type: " + p.type());
+            System.out.println("type.string: " + p.type().toString());
+            System.out.println("type.simple: " + p.type().simpleTypeName());
+            System.out.println("type.qualified: " + p.type().qualifiedTypeName());
+            System.out.println("--------------------------------------------------");
+            System.out.println("typename: " + p.typeName());
+            System.out.println("name: " + p.name());
+            System.out.println("string: " + p.toString());
+        }
 
         Tag[] method_tags = method.tags();
         JSONObject method_tags_info = new JSONObject();
