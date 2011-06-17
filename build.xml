@@ -20,6 +20,12 @@
         </fileset>
     </path>
 
+    <target name="cp">
+        <!-- Capture the path as a delimited property using the refid attribute -->
+        <property name="myclasspath" refid="project.classpath"/>
+        <!-- Emit the property to the ant console -->
+        <echo message="Classpath = ${myclasspath}"/>
+    </target>
 
     <target name="clean">
         <delete dir="${build.dir}" />
@@ -36,15 +42,22 @@
         <mkdir dir="${doc.example.dir}" />
     </target>
 
-    <target name="lr">
-        <antlr:ant-antlr3 xmlns:antlr="antlib:org/apache/tools/ant/antlr"
-            target="src/Java.g"
-            outputdirectory="${build.antlr.dir}">
-            <classpath refid="project.classpath"/>
-        </antlr:ant-antlr3>
+    <target name="lrx">
+        <antlr target="src/Java.g" outputdirectory="${build.antlr.dir}">
+            <classpath refid="project.classpath" />
+        </antlr>
     </target>
 
-    <target name="compile-lr" depends="lr">
+
+    <target name="lr" depends="prepare">
+        <java jar="lib/antlr-3.3-complete.jar" fork="true">
+            <arg value="-o"/>
+            <arg value="${build.antlr.dir}"/>
+            <arg value="${src.dir}/Java.g"/>
+        </java>
+    </target>
+
+    <target name="compile-lr">
         <javac srcdir="${build.antlr.dir}" destdir="${build.prod.dir}">
             <classpath refid="project.classpath" />
         </javac>
@@ -56,23 +69,22 @@
         </javac>
     </target>
 
-    <target name="compile-tests" depends="jar">
+    <target name="compile-tests" depends="compile">
         <javac srcdir="${test.dir}" destdir="${build.test.dir}">
             <compilerarg value="-Xlint" />
             <classpath refid="project.classpath" />
         </javac>
     </target>
 
-    <target name="compile-example">
+    <target name="compile-example" depends="clean, prepare">
         <javac srcdir="${example.dir}" destdir="${build.example.dir}">
             <compilerarg value="-Xlint" />
             <classpath refid="project.classpath" />
         </javac>
     </target>
 
-    <target name="jar" depends="clean, prepare, compile-lr, compile">
-        <property name="version.num" value="0.11"/>
-        <jar basedir="${build.prod.dir}" destfile="${build.dir}/json-doclet-${version.num}.jar" />
+    <target name="jar" depends="clean,prepare,lr,compile-lr,compile">
+        <jar basedir="${build.prod.dir}" destfile="${build.dir}/json-doclet.jar" />
     </target>
 
     <target name="javadoc">

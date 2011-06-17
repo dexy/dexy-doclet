@@ -317,8 +317,6 @@ scope {
     $compilationUnit::methods = new JSONObject();
     $compilationUnit::all_info = new JSONObject();
     $compilationUnit::param_types = new ArrayList();
-    System.out.println("in compilationUnit init");
-    System.out.println($compilationUnit::param_types);
 }
     :   (   (annotations
             )?
@@ -560,9 +558,15 @@ scope {
         )*
         '}'
             {
-            $methodDeclaration::methodName = $IDENTIFIER.text + $formalParameters.text;
-            System.out.println("parsed method name: " + $methodDeclaration::methodName);
-            System.out.println("arraylist params: " + $compilationUnit::param_types);
+            String mn = $IDENTIFIER.text + "(";
+            for (int j=0;j<$compilationUnit::param_types.size();j++) {
+                mn = mn + $compilationUnit::param_types.get(j);
+                if (j < $compilationUnit::param_types.size() - 1) {
+                  mn = mn + ",";
+                }
+            }
+            mn = mn + ")";
+            $methodDeclaration::methodName = mn;
             $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
             }
     |   modifiers
@@ -581,11 +585,16 @@ scope {
             block
         |   ';'
         )
-
             {
-            $methodDeclaration::methodName = $IDENTIFIER.text + $formalParameters.text;
-            System.out.println("parsed method name: " + $methodDeclaration::methodName);
-            System.out.println("arraylist params: " + $compilationUnit::param_types);
+            String mn = $IDENTIFIER.text + "(";
+            for (int j=0;j<$compilationUnit::param_types.size();j++) {
+                mn = mn + $compilationUnit::param_types.get(j);
+                if (j < $compilationUnit::param_types.size() - 1) {
+                    mn = mn + ",";
+                }
+            }
+            mn = mn + ")";
+            $methodDeclaration::methodName = mn;
             $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
             }
     ;
@@ -648,7 +657,7 @@ interfaceFieldDeclaration
     ;
 
 
-type 
+type
     :   classOrInterfaceType
         ('[' ']'
         )*
@@ -705,7 +714,6 @@ qualifiedNameList
 
 formalParameters
 @init {
-    System.out.println("resetting param_types in formalParameters");
     $compilationUnit::param_types = new ArrayList();
 }
     :   '('
@@ -726,9 +734,9 @@ formalParameterDecls
     ;
 
 normalParameterDecl
-    :   variableModifiers type IDENTIFIER { $compilationUnit::param_types.add($type.text); }
-        ('[' ']'
-        )*
+    :   variableModifiers type { $compilationUnit::param_types.add($type.text); } IDENTIFIER
+    ( '[' ']'
+    )*
     ;
 
 ellipsisParameterDecl 
