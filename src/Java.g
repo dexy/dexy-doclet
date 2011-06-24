@@ -557,18 +557,19 @@ scope {
         (blockStatement
         )*
         '}'
-            {
-            String mn = $IDENTIFIER.text + "(";
-            for (int j=0;j<$compilationUnit::param_types.size();j++) {
-                mn = mn + $compilationUnit::param_types.get(j);
-                if (j < $compilationUnit::param_types.size() - 1) {
-                  mn = mn + ",";
-                }
-            }
-            mn = mn + ")";
-            $methodDeclaration::methodName = mn;
-            $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
-            }
+{
+    // Collect constructors.
+    String mn = $IDENTIFIER.text + "(";
+    for (int j=0;j<$compilationUnit::param_types.size();j++) {
+        mn = mn + $compilationUnit::param_types.get(j);
+        if (j < $compilationUnit::param_types.size() - 1) {
+            mn = mn + ",";
+        }
+    }
+    mn = mn + ")";
+    $methodDeclaration::methodName = mn;
+    $compilationUnit::methods.put($methodDeclaration::methodName, $methodDeclaration.text);
+}
     |   modifiers
         (typeParameters
         )?
