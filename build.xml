@@ -91,18 +91,20 @@
         </javadoc>
     </target>
 
+    <!-- @export "example-doc" -->
     <target name="example" depends="jar">
         <javadoc
-            sourcefiles="example/helloworld.java"
+            sourcefiles="${ex.dir}/helloworld.java,${ex.dir}/package-info.java"
             doclet="it.dexy.jsondoclet.Doclet"
             docletpathref="project.classpath"
             destdir="${build.ex.dir}"
             />
         <javadoc
-            sourcefiles="example/helloworld.java"
+            sourcefiles="${ex.dir}/helloworld.java,${ex.dir}/package-info.java"
             destdir="${build.ex.dir}"
             />
     </target>
+    <!-- @end -->
 
     <target name="test" depends="compile-tests">
         <junit haltonfailure="true">

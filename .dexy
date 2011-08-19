@@ -1,0 +1,17 @@
+{
+  "run-ant.sh|bash" : { "cwd" : ".." },
+  "javadoc-data.json|javadocs" : { "inputs" : ["run-ant.sh|bash"]},
+  "javadoc-data.json|ppjson|pyg" : { "inputs" : ["run-ant.sh|bash"]},
+  "javadoc-data.json|dexy" : { "inputs" : ["run-ant.sh|bash"]},
+  "index.md|jinja|markdown|hd|ft" : {"allinputs" : true},
+  "debug.txt|jinja" : {"allinputs" : true},
+  ".dexy|ppjson|pyg" : {},
+  "*.java|pyg" : {},
+  "*.java|idio" : {},
+  "*.sh|pyg" : {},
+  "*.xml|pyg" : {},
+  "helloworld.java|java" : {
+    "main" : "hello.helloworld"
+  },
+  "_*.html|dexy" : {}
+}

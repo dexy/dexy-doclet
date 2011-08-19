@@ -63,9 +63,10 @@ public class Doclet {
                 package_info = new JSONObject();
                 package_classes_info = new JSONObject();
 
-                // Package-level info
+                /// @export "package-comment-text"
                 package_info.put("comment-text", package_doc.commentText());
-                package_info.put("raw-comment-text", package_doc.commentText());
+                package_info.put("raw-comment-text", package_doc.getRawCommentText());
+                /// @end
             }
 
             // Get info for this class, put it in the list of classes for this
@@ -113,11 +114,15 @@ public class Doclet {
         if (cls.superclass() != null) {
             class_info.put("superclass", cls.superclass().toString());
         }
-        class_info.put("comment-text", cls.commentText());
         class_info.put("package", cls.containingPackage().name());
         class_info.put("qualified-name", cls.qualifiedName());
-        class_info.put("source-file", cls.position().file().toString());
+        /// @export "class-comment-text"
+        class_info.put("comment-text", cls.commentText());
+        class_info.put("raw-comment-text", cls.getRawCommentText());
+        /// @export "class-file-info"
         class_info.put("line-start", cls.position().line());
+        class_info.put("source-file", cls.position().file().toString());
+        /// @end
 
         String class_source_code = (String)((JSONObject)source_code.get("classes")).get(cls.qualifiedName());
         if (class_source_code == null) {
@@ -168,6 +173,14 @@ public class Doclet {
         class_info.put("fulltext", buffer.toString());
 
         class_info.put("inline-tags", inline_tag_info);
+
+        /// @export "class-interfaces"
+        ClassDoc interfaces[] = cls.interfaces();
+        JSONArray interfaces_info = new JSONArray();
+        for (int j = 0; j < interfaces.length; j++) {
+            interfaces_info.add(interfaces[j].qualifiedName());
+        }
+        class_info.put("interfaces", interfaces_info);
 
         /// @export "class-fields"
         FieldDoc fields[] = cls.fields();

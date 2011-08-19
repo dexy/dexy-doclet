@@ -1,7 +1,0 @@
-{
-  "javadoc-data.json|javadocs" : {},
-  "doc.html|jinja" : {"allinputs" : true},
-  "helloworld.java|java" : {
-    "main" : "hello.helloworld"
-  }
-}
