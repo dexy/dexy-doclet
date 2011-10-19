@@ -99,14 +99,20 @@ public class Doclet {
     public static JSONObject classInfo(ClassDoc cls) throws java.io.IOException, RecognitionException {
         JSONObject class_info = new JSONObject();
 
+        JSONObject source_code = new JSONObject();
+
         String source_file_name = cls.position().file().toString();
-        System.out.println("About to read source file " + source_file_name);
+        if (source_file_name.indexOf("/") < 0) {
+            source_file_name = "src/" + cls.containingPackage().name().replace(".", "/") + "/" + cls.position().file().toString();
+        }
+        System.out.println("About to read source file: " + source_file_name);
+
         ANTLRFileStream input = new ANTLRFileStream(source_file_name);
         JavaLexer lexer = new JavaLexer(input);
         TokenRewriteStream tokens = new TokenRewriteStream(lexer);
         JavaParser parser = new JavaParser(tokens);
-        JSONObject source_code = parser.compilationUnit();
-        System.out.println(((JSONObject)source_code.get("methods")).keySet());
+        source_code = parser.compilationUnit();
+        //System.out.println(((JSONObject)source_code.get("methods")).keySet());
 
         // Store references to classes, e.g. @see and automatically detected.
         JSONObject references = new JSONObject();
@@ -206,12 +212,13 @@ public class Doclet {
                 System.out.println("constructor source code not found under " + full_constructor_name);
                 System.out.println(constructors[j].qualifiedName() + constructors[j].signature());
                 System.out.println(((JSONObject)source_code.get("methods")).keySet());
+            } else {
+                // Add our parsed source code to javadoc info.
+                constructor_info.put("source", constructor_source_code);
+
+                constructors_info.put(full_constructor_name, constructor_info);
             }
 
-            // Add our parsed source code to javadoc info.
-            constructor_info.put("source", constructor_source_code);
-
-            constructors_info.put(full_constructor_name, constructor_info);
         }
 
         /// @export "class-methods"
@@ -256,7 +263,7 @@ public class Doclet {
             Parameter p = params[j];
             simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
             if (j < params.length - 1) {
-              simpleParamList = simpleParamList + ",";
+                simpleParamList = simpleParamList + ",";
             }
         }
         // Uniquely identify this constructor within the scope of the class
@@ -286,7 +293,7 @@ public class Doclet {
             Parameter p = params[j];
             simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
             if (j < params.length - 1) {
-              simpleParamList = simpleParamList + ",";
+                simpleParamList = simpleParamList + ",";
             }
         }
         // Uniquely identify this method within the scope of the class
@@ -367,24 +374,24 @@ public class Doclet {
         return tag_info;
     }
 
-private static HashMap readOptions(String[][] options) {
-    HashMap options_hash = new HashMap();
+    private static HashMap readOptions(String[][] options) {
+        HashMap options_hash = new HashMap();
 
-    for (int i = 0; i < options.length; i++) {
-        String[] opt = options[i];
-        if (opt[0].equals("-d")) {
-            options_hash.put("destdir",  opt[1]);
+        for (int i = 0; i < options.length; i++) {
+            String[] opt = options[i];
+            if (opt[0].equals("-d")) {
+                options_hash.put("destdir",  opt[1]);
+            }
+        }
+        return options_hash;
+    }
+
+    public static int optionLength(String option) {
+        if (option.equals("-d")) {
+            return 2;
+        } else {
+            return 0;
         }
     }
-    return options_hash;
-}
-
-public static int optionLength(String option) {
-    if (option.equals("-d")) {
-        return 2;
-    } else {
-        return 0;
-    }
-}
 
 }
