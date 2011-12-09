@@ -32,7 +32,16 @@ public class Doclet {
         String destfile = "javadoc-data.json";
 
         if (options.containsKey("destdir")) {
-            destdir = (String)options.get("destdir");
+            String specified_destdir = (String)options.get("destdir");
+            System.out.println("specified " + specified_destdir + "as destination");
+            if (specified_destdir.contains(".json")) {
+                File destdir_file = new File(specified_destdir);
+                destdir = destdir_file.getParent().toString();
+                destfile = specified_destdir.replace(destdir, "");
+                System.out.println("Will save content in " + destfile + " in " + destdir);
+            } else {
+                destdir = specified_destdir;
+            }
         }
 
         JSONObject packages_info = new JSONObject();
