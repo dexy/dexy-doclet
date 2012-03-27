@@ -155,146 +155,124 @@ public class DexyDoclet {
         }
 
         /// @export "class-constructors"
-//        ConstructorDoc constructors[] = cls.constructors();
-//        JSONObject constructors_info = new JSONObject();
-//        for (int j = 0; j < constructors.length; j++) {
-//            // Get javadoc info.
-//            JSONObject constructor_info = constructorInfo(constructors[j]);
-//            String full_constructor_name = (String)constructor_info.get("full-constructor-name");
-//            String constructor_source_code = (String)((JSONObject)source_code.get("methods")).get(full_constructor_name);
-//            if (constructor_source_code == null) {
-//                System.out.println("constructor source code not found under " + full_constructor_name);
-//                System.out.println(constructors[j].qualifiedName() + constructors[j].signature());
-//                System.out.println(((JSONObject)source_code.get("methods")).keySet());
-//            } else {
-//                // Add our parsed source code to javadoc info.
-//                constructor_info.put("source", constructor_source_code);
-//
-//                constructors_info.put(full_constructor_name, constructor_info);
-//            }
-//
-//        }
+        ConstructorDoc constructors[] = cls.constructors();
+        for (int j = 0; j < constructors.length; j++) {
+            // Get javadoc info.
+            constructorInfo(cls.containingPackage().name(), storage, source_code, constructors[j]);
+
+        }
 
         /// @export "class-methods"
-//        MethodDoc methods[] = cls.methods();
-//        JSONObject methods_info = new JSONObject();
-//        for (int j = 0; j < methods.length; j++) {
-//            // Get javadoc info.
-//            JSONObject method_info = methodInfo(methods[j]);
-//            String full_method_name = (String)method_info.get("full-method-name");
-//            String method_source_code = (String)((JSONObject)source_code.get("methods")).get(full_method_name);
-//            if (method_source_code == null) {
-//                System.out.println("method source code not found under " + full_method_name);
-//                System.out.println(methods[j].qualifiedName() + methods[j].signature());
-//                System.out.println(((JSONObject)source_code.get("methods")).keySet());
-//            }
-//
-//            // Add our parsed source code to javadoc info.
-//            method_info.put("source", method_source_code);
-//
-//            methods_info.put(full_method_name, method_info);
-//        }
-
-//        storage.append(cls.qualifiedName() + ":methods", methods_info.toString());
-//        storage.append(cls.qualifiedName() + ":constructors", constructors_info.toString());
+        MethodDoc methods[] = cls.methods();
+        JSONObject methods_info = new JSONObject();
+        for (int j = 0; j < methods.length; j++) {
+            methodInfo(cls.qualifiedName(), storage, source_code, methods[j]);
+        }
     }
 
-//    public static JSONObject constructorInfo(ConstructorDoc constructor) throws java.io.IOException {
-//        JSONObject constructor_info = new JSONObject();
-//        constructor_info.put("comment-text", constructor.commentText());
-//        constructor_info.put("flat-signature", constructor.flatSignature());
-//        constructor_info.put("modifiers", constructor.modifiers());
-//        constructor_info.put("name", constructor.name());
-//        constructor_info.put("qualified-name", constructor.qualifiedName());
-//        constructor_info.put("raw-comment-text", constructor.getRawCommentText());
-//        constructor_info.put("signature", constructor.signature());
-//
-//        String simpleParamList = "";
-//        Parameter[] params = constructor.parameters();
-//        for (int j = 0; j < params.length; j++) {
-//            Parameter p = params[j];
-//            simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
-//            if (j < params.length - 1) {
-//                simpleParamList = simpleParamList + ",";
-//            }
-//        }
-//        // Uniquely identify this constructor within the scope of the class
-//        constructor_info.put("full-constructor-name", constructor.name() + "(" + simpleParamList + ")");
-//
-//        return constructor_info;
-//    }
+    // This returns a simpler format than signature() which returns fully
+    // qualified class names.
+    public static String simpleParamList(ExecutableMemberDoc member) {
+        String simpleParamList = "";
+        Parameter[] params = member.parameters();
+        for (int j = 0; j < params.length; j++) {
+            Parameter p = params[j];
+            simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
+            if (j < params.length - 1) {
+                simpleParamList = simpleParamList + ",";
+            }
+        }
+        return simpleParamList;
+    }
 
-//    public static JSONObject methodInfo(MethodDoc method) throws java.io.IOException {
-//        JSONObject method_info = new JSONObject();
-//
-//        method_info.put("comment-text", method.commentText());
-//        method_info.put("flat-signature", method.flatSignature());
-//        method_info.put("modifiers", method.modifiers());
-//        method_info.put("name", method.name());
-//        method_info.put("qualified-name", method.qualifiedName());
-//        method_info.put("raw-comment-text", method.getRawCommentText());
-//        method_info.put("return-type", method.returnType().toString());
-//        method_info.put("signature", method.signature());
-//
-//        // Store references to classes, e.g. @see and automatically detected.
-//        JSONObject references = new JSONObject();
-//
-//        String simpleParamList = "";
-//        Parameter[] params = method.parameters();
-//        for (int j = 0; j < params.length; j++) {
-//            Parameter p = params[j];
-//            simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
-//            if (j < params.length - 1) {
-//                simpleParamList = simpleParamList + ",";
-//            }
-//        }
-//        // Uniquely identify this method within the scope of the class
-//        method_info.put("full-method-name", method.name() + "(" + simpleParamList + ")");
-//
-//        Tag[] method_tags = method.tags();
-//        JSONObject method_tags_info = new JSONObject();
-//        for (int k = 0; k < method_tags.length; k++) {
-//            JSONObject tag_info = tagInfo(method_tags[k]);
-//            method_tags_info.put(method_tags[k].name(), tag_info);
-//
-//        }
-//        method_info.put("tags", method_tags_info);
-//
-//        /// @export "method-inline-tags"
-//        Tag[] inline_tags = method.inlineTags();
-//        JSONArray tag_text = new JSONArray();
-//        JSONObject inline_tag_info = new JSONObject();
-//        for (int j = 0; j < inline_tags.length; j++) {
-//            JSONObject tag_info = tagInfo(inline_tags[j]);
-//            inline_tag_info.put(inline_tags[j].name(), tag_info);
-//
-//            if (tag_info.get("kind").equals("Text")) {
-//                tag_text.add(tag_info.get("text"));
-//            } else if (tag_info.get("kind").equals("@latex.ilb")) {
-//                tag_text.add(tag_info.get("latex"));
-//            } else if (tag_info.get("kind").equals("@latex.inline")) {
-//                tag_text.add(tag_info.get("latex"));
-//            } else if (tag_info.get("kind").equals("@code")) {
-//                tag_text.add("<code>"+tag_info.get("text")+"</code>");
-//            } else if (tag_info.get("kind").equals("@see")) {
-//                references.put(tag_info.get("ref"), tag_info.get("label"));
-//            } else {
-//                System.out.println("Using default option for tag type " + tag_info.get("kind"));
-//                System.out.println(tag_info.toString());
-//                tag_text.add(tag_info.get("text"));
-//            }
-//        }
-//        StringBuffer buffer = new StringBuffer();
-//        Iterator iter = tag_text.iterator();
-//        while (iter.hasNext()) {
-//            buffer.append(iter.next());
-//        }
-//        method_info.put("fulltext", buffer.toString());
-//        method_info.put("inline-tags", inline_tag_info);
-//        method_info.put("references", references);
-//
-//        return method_info;
-//    }
+    public static void constructorInfo(String package_name, KeyValueStorage storage, JSONObject source_code, ConstructorDoc constructor) throws java.io.IOException, com.almworks.sqlite4java.SQLiteException {
+        String full_constructor_name = constructor.name() + "(" + simpleParamList(constructor) + ")";
+        String constructor_source_code = (String)((JSONObject)source_code.get("methods")).get(full_constructor_name);
+
+        if (constructor_source_code == null) {
+            System.out.println("==================================================");
+            System.out.println("constructor source code not found under " + full_constructor_name);
+            System.out.println(((JSONObject)source_code.get("methods")).keySet());
+            System.out.println("==================================================");
+        } else {
+            storage.append(package_name + ":" + full_constructor_name + ":source", constructor_source_code);
+        }
+
+        storage.append(package_name + ":" + full_constructor_name + ":comment-text", constructor.commentText());
+        storage.append(package_name + ":" + full_constructor_name + ":flat-signature", constructor.flatSignature());
+        storage.append(package_name + ":" + full_constructor_name + ":modifiers", constructor.modifiers());
+        storage.append(package_name + ":" + full_constructor_name + ":name", constructor.name());
+        storage.append(package_name + ":" + full_constructor_name + ":qualified-name", constructor.qualifiedName());
+        storage.append(package_name + ":" + full_constructor_name + ":raw-comment-text", constructor.getRawCommentText());
+        storage.append(package_name + ":" + full_constructor_name + ":signature", constructor.signature());
+    }
+
+    public static void methodInfo(String class_name, KeyValueStorage storage, JSONObject source_code, MethodDoc method) throws java.io.IOException, com.almworks.sqlite4java.SQLiteException {
+        String full_method_name = method.name() + "(" + simpleParamList(method) + ")";
+
+        String method_source_code = (String)((JSONObject)source_code.get("methods")).get(full_method_name);
+        if (method_source_code == null) {
+            System.out.println("==================================================");
+            System.out.println("method source code not found under " + full_method_name);
+            System.out.println(((JSONObject)source_code.get("methods")).keySet());
+            System.out.println("==================================================");
+        } else {
+            storage.append(class_name + ":" + full_method_name + ":source", method_source_code);
+        }
+
+        storage.append(class_name + ":" + full_method_name + ":comment-text", method.commentText());
+        storage.append(class_name + ":" + full_method_name + ":flat-signature", method.flatSignature());
+        storage.append(class_name + ":" + full_method_name + ":modifiers", method.modifiers());
+        storage.append(class_name + ":" + full_method_name + ":name", method.name());
+        storage.append(class_name + ":" + full_method_name + ":qualified-name", method.qualifiedName());
+        storage.append(class_name + ":" + full_method_name + ":raw-comment-text", method.getRawCommentText());
+        storage.append(class_name + ":" + full_method_name + ":signature", method.signature());
+        storage.append(class_name + ":" + full_method_name + ":return-type", method.returnType().toString());
+        storage.append(class_name + ":" + full_method_name + ":class-name", method.containingClass().qualifiedName());
+        storage.append(class_name + ":" + full_method_name + ":package-name", method.containingPackage().name());
+
+
+        Tag[] method_tags = method.tags();
+        JSONObject method_tags_info = new JSONObject();
+        for (int k = 0; k < method_tags.length; k++) {
+            JSONObject tag_info = tagInfo(method_tags[k]);
+            method_tags_info.put(method_tags[k].name(), tag_info);
+
+        }
+        storage.append(class_name + ":" + full_method_name + ":tags", method_tags_info.toString());
+
+        /// @export "method-inline-tags"
+        Tag[] inline_tags = method.inlineTags();
+        JSONArray tag_text = new JSONArray();
+        JSONObject inline_tag_info = new JSONObject();
+        for (int j = 0; j < inline_tags.length; j++) {
+            JSONObject tag_info = tagInfo(inline_tags[j]);
+            inline_tag_info.put(inline_tags[j].name(), tag_info);
+
+            if (tag_info.get("kind").equals("Text")) {
+                tag_text.add(tag_info.get("text"));
+            } else if (tag_info.get("kind").equals("@latex.ilb")) {
+                tag_text.add(tag_info.get("latex"));
+            } else if (tag_info.get("kind").equals("@latex.inline")) {
+                tag_text.add(tag_info.get("latex"));
+            } else if (tag_info.get("kind").equals("@code")) {
+                tag_text.add("<code>"+tag_info.get("text")+"</code>");
+            } else if (tag_info.get("kind").equals("@see")) {
+                //references.put(tag_info.get("ref"), tag_info.get("label"));
+            } else {
+                System.out.println("Using default option for tag type " + tag_info.get("kind"));
+                System.out.println(tag_info.toString());
+                tag_text.add(tag_info.get("text"));
+            }
+        }
+        StringBuffer buffer = new StringBuffer();
+        Iterator iter = tag_text.iterator();
+        while (iter.hasNext()) {
+            buffer.append(iter.next());
+        }
+        storage.append(class_name + ":" + full_method_name + ":fulltext", buffer.toString());
+        storage.append(class_name + ":" + full_method_name + ":inline-tags", inline_tag_info.toString());
+    }
 
     public static JSONObject tagInfo(Tag tag) {
         JSONObject tag_info = new JSONObject();
