@@ -1,0 +1,349 @@
+package it.dexy.doclet;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import com.sun.javadoc.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.LineNumberReader;
+import java.io.StringWriter;
+import java.lang.StringBuffer;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.regex.Pattern;
+
+import latexlet.LaTeXlet;
+import latexlet.InlineBlockLaTeXlet;
+import latexlet.InlineLaTeXlet;
+import latexlet.BlockLaTeXlet;
+
+import it.dexy.doclet.JavaLexer;
+import it.dexy.doclet.JavaParser;
+import org.antlr.runtime.*;
+
+public class DexyDoclet {
+    public static boolean start(RootDoc root) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
+        // Get options from option parser.
+        HashMap options = readOptions(root.options());
+
+        String destdir = ".";
+        String destfile = "javadoc-data.json";
+
+        // We use the ant javadoc task to call this, which supports a 'destdir'
+        // option but not 'destfile', so if 'destdir' has a file extension
+        // assume that includes dest file.
+        if (options.containsKey("destdir")) {
+            String specified_destdir = (String)options.get("destdir");
+            System.out.println("specified " + specified_destdir + "as destination");
+            if (specified_destdir.contains(".")) {
+                File destdir_file = new File(specified_destdir);
+                destdir = destdir_file.getParent().toString();
+                destfile = specified_destdir.replace(destdir, "");
+                System.out.println("Will save content in " + destfile + " in " + destdir);
+            } else {
+                destdir = specified_destdir;
+            }
+        }
+
+        KeyValueStorage storage = new KeyValueStorage(destdir, destfile);
+
+        ClassDoc[] classes = root.classes();
+        for (int i = 0; i < classes.length; i++) {
+            PackageDoc package_doc = classes[i].containingPackage();
+            String class_name = classes[i].name();
+            String package_name = package_doc.name();
+
+            storage.append(package_name + ":comment-text", package_doc.commentText());
+            storage.append(package_name + ":raw-comment-text", package_doc.getRawCommentText());
+
+            classInfo(classes[i], storage);
+        }
+
+        storage.persist();
+        return true;
+    }
+
+    public static void classInfo(ClassDoc cls, KeyValueStorage storage) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
+        String source_file_name = cls.position().file().toString();
+
+        if (source_file_name.indexOf("/") < 0) {
+            source_file_name = "src/" + cls.containingPackage().name().replace(".", "/") + "/" + cls.position().file().toString();
+        }
+        System.out.println("About to read source file: " + source_file_name);
+
+        ANTLRFileStream input = new ANTLRFileStream(source_file_name);
+        JavaLexer lexer = new JavaLexer(input);
+        TokenRewriteStream tokens = new TokenRewriteStream(lexer);
+        JavaParser parser = new JavaParser(tokens);
+        JSONObject source_code = parser.compilationUnit();
+        System.out.println(((JSONObject)source_code.get("methods")).keySet());
+
+        if (cls.superclass() != null) {
+            storage.append(cls.qualifiedName() + ":superclass", cls.superclass().toString());
+        }
+        storage.append(cls.qualifiedName() + ":package", cls.containingPackage().name());
+        storage.append(cls.qualifiedName() + ":qualified-name", cls.qualifiedName());
+        storage.append(cls.qualifiedName() + ":comment-text", cls.commentText());
+        storage.append(cls.qualifiedName() + ":raw-comment-text", cls.getRawCommentText());
+        storage.append(cls.qualifiedName() + ":line-start", "" + cls.position().line());
+        storage.append(cls.qualifiedName() + ":source-file", "" + cls.position().file().toString());
+
+        String class_source_code = (String)((JSONObject)source_code.get("classes")).get(cls.qualifiedName());
+        if (class_source_code == null) {
+            class_source_code = (String)((JSONObject)source_code.get("classes")).get(cls.name());
+        }
+        if (class_source_code == null) {
+            System.out.println("class source code not found under " + cls.qualifiedName() + " or " + cls.name());
+        }
+        storage.append(cls.qualifiedName() + ":source", class_source_code);
+
+        /// @export "class-tags"
+        Tag[] tags = cls.tags();
+        String tags_info = "";
+        for (int j = 0; j < tags.length; j++) {
+            tags_info = tags_info + "," + tags[j];
+        }
+        storage.append(cls.qualifiedName() + ":tags", tags_info);
+
+        /// @export "class-inline-tags"
+//        Tag[] inline_tags = cls.inlineTags();
+//        JSONArray tag_text = new JSONArray();
+//        JSONObject inline_tag_info = new JSONObject();
+//        for (int j = 0; j < inline_tags.length; j++) {
+//            JSONObject tag_info = tagInfo(inline_tags[j]);
+//            tags_info.put(inline_tags[j].name(), tag_info);
+//
+//            if (tag_info.get("kind").equals("Text")) {
+//                tag_text.add(tag_info.get("text"));
+//            } else if (tag_info.get("kind").equals("@latex.ilb")) {
+//                tag_text.add(tag_info.get("latex"));
+//            } else if (tag_info.get("kind").equals("@latex.inline")) {
+//                tag_text.add(tag_info.get("latex"));
+//            } else if (tag_info.get("kind").equals("@code")) {
+//                tag_text.add("<code>"+tag_info.get("text")+"</code>");
+//            } else if (tag_info.get("kind").equals("@see")) {
+//                references.put(tag_info.get("ref"), tag_info.get("label"));
+//            } else {
+//                System.out.println("Using default option for tag type " + tag_info.get("kind"));
+//                tag_text.add(tag_info.get("text"));
+//            }
+//        }
+//
+//        StringBuffer buffer = new StringBuffer();
+//        Iterator iter = tag_text.iterator();
+//        while (iter.hasNext()) {
+//            buffer.append(iter.next());
+//        }
+//        storage.append(cls.qualifiedName() + ":fulltext", buffer.toString());
+//        storage.append(cls.qualifiedName() + ":inline-tags", inline_tag_info.toString());
+
+        /// @export "class-interfaces"
+        ClassDoc interfaces[] = cls.interfaces();
+        JSONArray interfaces_info = new JSONArray();
+        for (int j = 0; j < interfaces.length; j++) {
+            interfaces_info.add(interfaces[j].qualifiedName());
+        }
+        storage.append(cls.qualifiedName() + ":interfaces", interfaces_info.toString());
+
+        /// @export "class-fields"
+        FieldDoc fields[] = cls.fields();
+        for (int j = 0; j < fields.length; j++) {
+            storage.append(cls.qualifiedName() + ":" + fields[j].name() + ":type", fields[j].type().toString());
+            storage.append(cls.qualifiedName() + ":" + fields[j].name() + ":comment-text", fields[j].commentText());
+        }
+
+        /// @export "class-constructors"
+//        ConstructorDoc constructors[] = cls.constructors();
+//        JSONObject constructors_info = new JSONObject();
+//        for (int j = 0; j < constructors.length; j++) {
+//            // Get javadoc info.
+//            JSONObject constructor_info = constructorInfo(constructors[j]);
+//            String full_constructor_name = (String)constructor_info.get("full-constructor-name");
+//            String constructor_source_code = (String)((JSONObject)source_code.get("methods")).get(full_constructor_name);
+//            if (constructor_source_code == null) {
+//                System.out.println("constructor source code not found under " + full_constructor_name);
+//                System.out.println(constructors[j].qualifiedName() + constructors[j].signature());
+//                System.out.println(((JSONObject)source_code.get("methods")).keySet());
+//            } else {
+//                // Add our parsed source code to javadoc info.
+//                constructor_info.put("source", constructor_source_code);
+//
+//                constructors_info.put(full_constructor_name, constructor_info);
+//            }
+//
+//        }
+
+        /// @export "class-methods"
+//        MethodDoc methods[] = cls.methods();
+//        JSONObject methods_info = new JSONObject();
+//        for (int j = 0; j < methods.length; j++) {
+//            // Get javadoc info.
+//            JSONObject method_info = methodInfo(methods[j]);
+//            String full_method_name = (String)method_info.get("full-method-name");
+//            String method_source_code = (String)((JSONObject)source_code.get("methods")).get(full_method_name);
+//            if (method_source_code == null) {
+//                System.out.println("method source code not found under " + full_method_name);
+//                System.out.println(methods[j].qualifiedName() + methods[j].signature());
+//                System.out.println(((JSONObject)source_code.get("methods")).keySet());
+//            }
+//
+//            // Add our parsed source code to javadoc info.
+//            method_info.put("source", method_source_code);
+//
+//            methods_info.put(full_method_name, method_info);
+//        }
+
+//        storage.append(cls.qualifiedName() + ":methods", methods_info.toString());
+//        storage.append(cls.qualifiedName() + ":constructors", constructors_info.toString());
+    }
+
+//    public static JSONObject constructorInfo(ConstructorDoc constructor) throws java.io.IOException {
+//        JSONObject constructor_info = new JSONObject();
+//        constructor_info.put("comment-text", constructor.commentText());
+//        constructor_info.put("flat-signature", constructor.flatSignature());
+//        constructor_info.put("modifiers", constructor.modifiers());
+//        constructor_info.put("name", constructor.name());
+//        constructor_info.put("qualified-name", constructor.qualifiedName());
+//        constructor_info.put("raw-comment-text", constructor.getRawCommentText());
+//        constructor_info.put("signature", constructor.signature());
+//
+//        String simpleParamList = "";
+//        Parameter[] params = constructor.parameters();
+//        for (int j = 0; j < params.length; j++) {
+//            Parameter p = params[j];
+//            simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
+//            if (j < params.length - 1) {
+//                simpleParamList = simpleParamList + ",";
+//            }
+//        }
+//        // Uniquely identify this constructor within the scope of the class
+//        constructor_info.put("full-constructor-name", constructor.name() + "(" + simpleParamList + ")");
+//
+//        return constructor_info;
+//    }
+
+//    public static JSONObject methodInfo(MethodDoc method) throws java.io.IOException {
+//        JSONObject method_info = new JSONObject();
+//
+//        method_info.put("comment-text", method.commentText());
+//        method_info.put("flat-signature", method.flatSignature());
+//        method_info.put("modifiers", method.modifiers());
+//        method_info.put("name", method.name());
+//        method_info.put("qualified-name", method.qualifiedName());
+//        method_info.put("raw-comment-text", method.getRawCommentText());
+//        method_info.put("return-type", method.returnType().toString());
+//        method_info.put("signature", method.signature());
+//
+//        // Store references to classes, e.g. @see and automatically detected.
+//        JSONObject references = new JSONObject();
+//
+//        String simpleParamList = "";
+//        Parameter[] params = method.parameters();
+//        for (int j = 0; j < params.length; j++) {
+//            Parameter p = params[j];
+//            simpleParamList = simpleParamList + p.type().simpleTypeName() + p.type().dimension();
+//            if (j < params.length - 1) {
+//                simpleParamList = simpleParamList + ",";
+//            }
+//        }
+//        // Uniquely identify this method within the scope of the class
+//        method_info.put("full-method-name", method.name() + "(" + simpleParamList + ")");
+//
+//        Tag[] method_tags = method.tags();
+//        JSONObject method_tags_info = new JSONObject();
+//        for (int k = 0; k < method_tags.length; k++) {
+//            JSONObject tag_info = tagInfo(method_tags[k]);
+//            method_tags_info.put(method_tags[k].name(), tag_info);
+//
+//        }
+//        method_info.put("tags", method_tags_info);
+//
+//        /// @export "method-inline-tags"
+//        Tag[] inline_tags = method.inlineTags();
+//        JSONArray tag_text = new JSONArray();
+//        JSONObject inline_tag_info = new JSONObject();
+//        for (int j = 0; j < inline_tags.length; j++) {
+//            JSONObject tag_info = tagInfo(inline_tags[j]);
+//            inline_tag_info.put(inline_tags[j].name(), tag_info);
+//
+//            if (tag_info.get("kind").equals("Text")) {
+//                tag_text.add(tag_info.get("text"));
+//            } else if (tag_info.get("kind").equals("@latex.ilb")) {
+//                tag_text.add(tag_info.get("latex"));
+//            } else if (tag_info.get("kind").equals("@latex.inline")) {
+//                tag_text.add(tag_info.get("latex"));
+//            } else if (tag_info.get("kind").equals("@code")) {
+//                tag_text.add("<code>"+tag_info.get("text")+"</code>");
+//            } else if (tag_info.get("kind").equals("@see")) {
+//                references.put(tag_info.get("ref"), tag_info.get("label"));
+//            } else {
+//                System.out.println("Using default option for tag type " + tag_info.get("kind"));
+//                System.out.println(tag_info.toString());
+//                tag_text.add(tag_info.get("text"));
+//            }
+//        }
+//        StringBuffer buffer = new StringBuffer();
+//        Iterator iter = tag_text.iterator();
+//        while (iter.hasNext()) {
+//            buffer.append(iter.next());
+//        }
+//        method_info.put("fulltext", buffer.toString());
+//        method_info.put("inline-tags", inline_tag_info);
+//        method_info.put("references", references);
+//
+//        return method_info;
+//    }
+
+    public static JSONObject tagInfo(Tag tag) {
+        JSONObject tag_info = new JSONObject();
+        String tag_kind = tag.kind().toString();
+
+        tag_info.put("kind", tag_kind);
+        tag_info.put("text", tag.text());
+        tag_info.put("string", tag.toString());
+
+        // Special handling for custom taglets
+        if (tag_kind.equals("@latex.ilb")) {
+            LaTeXlet ltag = new InlineBlockLaTeXlet();
+            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
+            tag_info.put("latex", tag_out[1]);
+        } else if (tag_kind.equals("@latex.inline")) {
+            LaTeXlet ltag = new InlineLaTeXlet();
+            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
+            tag_info.put("latex", tag_out[1]);
+        } else if (tag_kind.equals("@latex.block")) {
+            LaTeXlet ltag = new BlockLaTeXlet();
+            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
+            tag_info.put("latex", tag_out[1]);
+        } else if (tag_kind.equals("@see")) {
+            SeeTag stag = (SeeTag)tag;
+            tag_info.put("label", stag.label());
+            tag_info.put("ref", stag.referencedClassName());
+        }
+
+        return tag_info;
+    }
+
+    private static HashMap readOptions(String[][] options) {
+        HashMap options_hash = new HashMap();
+
+        for (int i = 0; i < options.length; i++) {
+            String[] opt = options[i];
+            if (opt[0].equals("-d")) {
+                options_hash.put("destdir",  opt[1]);
+            }
+        }
+        return options_hash;
+    }
+
+    public static int optionLength(String option) {
+        if (option.equals("-d")) {
+            return 2;
+        } else {
+            return 0;
+        }
+    }
+
+}

@@ -291,13 +291,13 @@ options {
 }
 
 @header {
-    package it.dexy.jsondoclet;
+    package it.dexy.doclet;
     import org.json.simple.JSONObject;
     import java.util.ArrayList;
 }
 
 @lexer::header {
-    package it.dexy.jsondoclet;
+    package it.dexy.doclet;
 }
 
 /********************************************************************************************
