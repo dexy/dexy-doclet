@@ -14,11 +14,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
-import latexlet.LaTeXlet;
-import latexlet.InlineBlockLaTeXlet;
-import latexlet.InlineLaTeXlet;
-import latexlet.BlockLaTeXlet;
-
 import it.dexy.doclet.JavaLexer;
 import it.dexy.doclet.JavaParser;
 import org.antlr.runtime.*;
@@ -27,6 +22,7 @@ public class DexyDoclet {
     public static boolean start(RootDoc root) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
         // Get options from option parser.
         HashMap options = readOptions(root.options());
+        String sourcepath = (String)options.get("sourcepath");
 
         String destdir = ".";
         String destfile = "javadoc-data.json";
@@ -58,37 +54,27 @@ public class DexyDoclet {
             storage.append(package_name + ":comment-text", package_doc.commentText());
             storage.append(package_name + ":raw-comment-text", package_doc.getRawCommentText());
 
-            classInfo(classes[i], storage);
+            classInfo(sourcepath, classes[i], storage);
         }
 
         storage.persist();
         return true;
     }
 
-    public static void classInfo(ClassDoc cls, KeyValueStorage storage) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
+    public static void classInfo(String sourcepath, ClassDoc cls, KeyValueStorage storage) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
         String source_file_name = cls.position().file().toString();
 
         if (source_file_name.indexOf("/") < 0) {
-            source_file_name = "src/" + cls.containingPackage().name().replace(".", "/") + "/" + cls.position().file().toString();
+            source_file_name = sourcepath + "/" + cls.containingPackage().name().replace(".", "/") + "/" + cls.position().file().toString();
         }
-        System.out.println("About to read source file: " + source_file_name);
 
         ANTLRFileStream input = new ANTLRFileStream(source_file_name);
         JavaLexer lexer = new JavaLexer(input);
         TokenRewriteStream tokens = new TokenRewriteStream(lexer);
         JavaParser parser = new JavaParser(tokens);
         JSONObject source_code = parser.compilationUnit();
-        System.out.println(((JSONObject)source_code.get("methods")).keySet());
 
-        if (cls.superclass() != null) {
-            storage.append(cls.qualifiedName() + ":superclass", cls.superclass().toString());
-        }
-        storage.append(cls.qualifiedName() + ":package", cls.containingPackage().name());
-        storage.append(cls.qualifiedName() + ":qualified-name", cls.qualifiedName());
-        storage.append(cls.qualifiedName() + ":comment-text", cls.commentText());
-        storage.append(cls.qualifiedName() + ":raw-comment-text", cls.getRawCommentText());
-        storage.append(cls.qualifiedName() + ":line-start", "" + cls.position().line());
-        storage.append(cls.qualifiedName() + ":source-file", "" + cls.position().file().toString());
+        System.out.println(((JSONObject)source_code.get("methods")).keySet());
 
         String class_source_code = (String)((JSONObject)source_code.get("classes")).get(cls.qualifiedName());
         if (class_source_code == null) {
@@ -97,7 +83,35 @@ public class DexyDoclet {
         if (class_source_code == null) {
             System.out.println("class source code not found under " + cls.qualifiedName() + " or " + cls.name());
         }
-        storage.append(cls.qualifiedName() + ":source", class_source_code);
+        storage.append(cls.qualifiedName() + "::source", class_source_code);
+
+        /// @export "class-constructors"
+        ConstructorDoc constructors[] = cls.constructors();
+        for (int j = 0; j < constructors.length; j++) {
+            // Get javadoc info.
+            constructorInfo(cls.containingPackage().name(), storage, source_code, constructors[j]);
+
+        }
+
+        /// @export "class-methods"
+        MethodDoc methods[] = cls.methods();
+        JSONObject methods_info = new JSONObject();
+        for (int j = 0; j < methods.length; j++) {
+            methodInfo(cls.qualifiedName(), storage, source_code, methods[j]);
+        }
+
+
+        if (cls.superclass() != null) {
+            storage.append(cls.qualifiedName() + "::superclass", cls.superclass().toString());
+        }
+
+        storage.append(cls.qualifiedName() + "::package", cls.containingPackage().name());
+        storage.append(cls.qualifiedName() + "::qualified-name", cls.qualifiedName());
+        storage.append(cls.qualifiedName() + "::comment-text", cls.commentText());
+        storage.append(cls.qualifiedName() + "::raw-comment-text", cls.getRawCommentText());
+        storage.append(cls.qualifiedName() + "::line-start", "" + cls.position().line());
+        storage.append(cls.qualifiedName() + "::source-file", "" + cls.position().file().toString());
+
 
         /// @export "class-tags"
         Tag[] tags = cls.tags();
@@ -108,36 +122,36 @@ public class DexyDoclet {
         storage.append(cls.qualifiedName() + ":tags", tags_info);
 
         /// @export "class-inline-tags"
-//        Tag[] inline_tags = cls.inlineTags();
-//        JSONArray tag_text = new JSONArray();
-//        JSONObject inline_tag_info = new JSONObject();
-//        for (int j = 0; j < inline_tags.length; j++) {
-//            JSONObject tag_info = tagInfo(inline_tags[j]);
-//            tags_info.put(inline_tags[j].name(), tag_info);
-//
-//            if (tag_info.get("kind").equals("Text")) {
-//                tag_text.add(tag_info.get("text"));
-//            } else if (tag_info.get("kind").equals("@latex.ilb")) {
-//                tag_text.add(tag_info.get("latex"));
-//            } else if (tag_info.get("kind").equals("@latex.inline")) {
-//                tag_text.add(tag_info.get("latex"));
-//            } else if (tag_info.get("kind").equals("@code")) {
-//                tag_text.add("<code>"+tag_info.get("text")+"</code>");
-//            } else if (tag_info.get("kind").equals("@see")) {
-//                references.put(tag_info.get("ref"), tag_info.get("label"));
-//            } else {
-//                System.out.println("Using default option for tag type " + tag_info.get("kind"));
-//                tag_text.add(tag_info.get("text"));
-//            }
-//        }
-//
-//        StringBuffer buffer = new StringBuffer();
-//        Iterator iter = tag_text.iterator();
-//        while (iter.hasNext()) {
-//            buffer.append(iter.next());
-//        }
-//        storage.append(cls.qualifiedName() + ":fulltext", buffer.toString());
-//        storage.append(cls.qualifiedName() + ":inline-tags", inline_tag_info.toString());
+        //        Tag[] inline_tags = cls.inlineTags();
+        //        JSONArray tag_text = new JSONArray();
+        //        JSONObject inline_tag_info = new JSONObject();
+        //        for (int j = 0; j < inline_tags.length; j++) {
+        //            JSONObject tag_info = tagInfo(inline_tags[j]);
+        //            tags_info.put(inline_tags[j].name(), tag_info);
+        //
+        //            if (tag_info.get("kind").equals("Text")) {
+        //                tag_text.add(tag_info.get("text"));
+        //            } else if (tag_info.get("kind").equals("@latex.ilb")) {
+        //                tag_text.add(tag_info.get("latex"));
+        //            } else if (tag_info.get("kind").equals("@latex.inline")) {
+        //                tag_text.add(tag_info.get("latex"));
+        //            } else if (tag_info.get("kind").equals("@code")) {
+        //                tag_text.add("<code>"+tag_info.get("text")+"</code>");
+        //            } else if (tag_info.get("kind").equals("@see")) {
+        //                references.put(tag_info.get("ref"), tag_info.get("label"));
+        //            } else {
+        //                System.out.println("Using default option for tag type " + tag_info.get("kind"));
+        //                tag_text.add(tag_info.get("text"));
+        //            }
+        //        }
+        //
+        //        StringBuffer buffer = new StringBuffer();
+        //        Iterator iter = tag_text.iterator();
+        //        while (iter.hasNext()) {
+        //            buffer.append(iter.next());
+        //        }
+        //        storage.append(cls.qualifiedName() + ":fulltext", buffer.toString());
+        //        storage.append(cls.qualifiedName() + ":inline-tags", inline_tag_info.toString());
 
         /// @export "class-interfaces"
         ClassDoc interfaces[] = cls.interfaces();
@@ -154,20 +168,6 @@ public class DexyDoclet {
             storage.append(cls.qualifiedName() + ":" + fields[j].name() + ":comment-text", fields[j].commentText());
         }
 
-        /// @export "class-constructors"
-        ConstructorDoc constructors[] = cls.constructors();
-        for (int j = 0; j < constructors.length; j++) {
-            // Get javadoc info.
-            constructorInfo(cls.containingPackage().name(), storage, source_code, constructors[j]);
-
-        }
-
-        /// @export "class-methods"
-        MethodDoc methods[] = cls.methods();
-        JSONObject methods_info = new JSONObject();
-        for (int j = 0; j < methods.length; j++) {
-            methodInfo(cls.qualifiedName(), storage, source_code, methods[j]);
-        }
     }
 
     // This returns a simpler format than signature() which returns fully
@@ -282,20 +282,7 @@ public class DexyDoclet {
         tag_info.put("text", tag.text());
         tag_info.put("string", tag.toString());
 
-        // Special handling for custom taglets
-        if (tag_kind.equals("@latex.ilb")) {
-            LaTeXlet ltag = new InlineBlockLaTeXlet();
-            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
-            tag_info.put("latex", tag_out[1]);
-        } else if (tag_kind.equals("@latex.inline")) {
-            LaTeXlet ltag = new InlineLaTeXlet();
-            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
-            tag_info.put("latex", tag_out[1]);
-        } else if (tag_kind.equals("@latex.block")) {
-            LaTeXlet ltag = new BlockLaTeXlet();
-            String[] tag_out = ltag.extractLaTeXAndPreambleAndResolutionFrom(tag);
-            tag_info.put("latex", tag_out[1]);
-        } else if (tag_kind.equals("@see")) {
+        if (tag_kind.equals("@see")) {
             SeeTag stag = (SeeTag)tag;
             tag_info.put("label", stag.label());
             tag_info.put("ref", stag.referencedClassName());
@@ -312,12 +299,18 @@ public class DexyDoclet {
             if (opt[0].equals("-d")) {
                 options_hash.put("destdir",  opt[1]);
             }
+            if (opt[0].equals("-sourcepath")) {
+                System.out.println("found sourcepath " + opt[1]);
+                options_hash.put("sourcepath",  opt[1]);
+            }
         }
         return options_hash;
     }
 
     public static int optionLength(String option) {
         if (option.equals("-d")) {
+            return 2;
+        } else if (option.equals("-sourcepath")) {
             return 2;
         } else {
             return 0;
