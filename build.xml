@@ -18,7 +18,6 @@
         <fileset dir="${lib.dir}">
             <include name="*.jar"/>
         </fileset>
-        <pathelement path="/mnt/work/sqlite4java-282/sqlite4java.jar" />
     </path>
 
     <target name="cp">
@@ -82,7 +81,7 @@
     </target>
 
     <target name="jar" depends="clean,prepare,lr,compile-lr,compile">
-        <property name="version.num" value="0.4.0"/>
+        <property name="version.num" value="0.4.1"/>
         <jar basedir="${build.prod.dir}" destfile="${build.dir}/dexy-doclet-${version.num}.jar" />
     </target>
 

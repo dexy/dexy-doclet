@@ -19,7 +19,7 @@ import it.dexy.doclet.JavaParser;
 import org.antlr.runtime.*;
 
 public class DexyDoclet {
-    public static boolean start(RootDoc root) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
+    public static boolean start(RootDoc root) throws java.io.IOException, RecognitionException, java.sql.SQLException, java.lang.ClassNotFoundException {
         // Get options from option parser.
         HashMap options = readOptions(root.options());
         String sourcepath = (String)options.get("sourcepath");
@@ -61,7 +61,7 @@ public class DexyDoclet {
         return true;
     }
 
-    public static void classInfo(String sourcepath, ClassDoc cls, KeyValueStorage storage) throws java.io.IOException, RecognitionException, com.almworks.sqlite4java.SQLiteException {
+    public static void classInfo(String sourcepath, ClassDoc cls, KeyValueStorage storage) throws java.io.IOException, RecognitionException, java.sql.SQLException {
         String source_file_name = cls.position().file().toString();
 
         if (source_file_name.indexOf("/") < 0) {
@@ -185,7 +185,7 @@ public class DexyDoclet {
         return simpleParamList;
     }
 
-    public static void constructorInfo(String package_name, KeyValueStorage storage, JSONObject source_code, ConstructorDoc constructor) throws java.io.IOException, com.almworks.sqlite4java.SQLiteException {
+    public static void constructorInfo(String package_name, KeyValueStorage storage, JSONObject source_code, ConstructorDoc constructor) throws java.io.IOException, java.sql.SQLException {
         String full_constructor_name = constructor.name() + "(" + simpleParamList(constructor) + ")";
         String constructor_source_code = (String)((JSONObject)source_code.get("methods")).get(full_constructor_name);
 
@@ -207,7 +207,7 @@ public class DexyDoclet {
         storage.append(package_name + ":" + full_constructor_name + ":signature", constructor.signature());
     }
 
-    public static void methodInfo(String class_name, KeyValueStorage storage, JSONObject source_code, MethodDoc method) throws java.io.IOException, com.almworks.sqlite4java.SQLiteException {
+    public static void methodInfo(String class_name, KeyValueStorage storage, JSONObject source_code, MethodDoc method) throws java.io.IOException, java.sql.SQLException {
         String full_method_name = method.name() + "(" + simpleParamList(method) + ")";
 
         String method_source_code = (String)((JSONObject)source_code.get("methods")).get(full_method_name);
