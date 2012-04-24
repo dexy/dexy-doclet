@@ -131,10 +131,6 @@ public class DexyDoclet {
         //
         //            if (tag_info.get("kind").equals("Text")) {
         //                tag_text.add(tag_info.get("text"));
-        //            } else if (tag_info.get("kind").equals("@latex.ilb")) {
-        //                tag_text.add(tag_info.get("latex"));
-        //            } else if (tag_info.get("kind").equals("@latex.inline")) {
-        //                tag_text.add(tag_info.get("latex"));
         //            } else if (tag_info.get("kind").equals("@code")) {
         //                tag_text.add("<code>"+tag_info.get("text")+"</code>");
         //            } else if (tag_info.get("kind").equals("@see")) {
@@ -251,10 +247,6 @@ public class DexyDoclet {
 
             if (tag_info.get("kind").equals("Text")) {
                 tag_text.add(tag_info.get("text"));
-            } else if (tag_info.get("kind").equals("@latex.ilb")) {
-                tag_text.add(tag_info.get("latex"));
-            } else if (tag_info.get("kind").equals("@latex.inline")) {
-                tag_text.add(tag_info.get("latex"));
             } else if (tag_info.get("kind").equals("@code")) {
                 tag_text.add("<code>"+tag_info.get("text")+"</code>");
             } else if (tag_info.get("kind").equals("@see")) {

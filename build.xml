@@ -81,7 +81,7 @@
     </target>
 
     <target name="jar" depends="clean,prepare,lr,compile-lr,compile">
-        <property name="version.num" value="0.4.1"/>
+        <property name="version.num" value="0.4.2"/>
         <jar basedir="${build.prod.dir}" destfile="${build.dir}/dexy-doclet-${version.num}.jar" />
     </target>
 
